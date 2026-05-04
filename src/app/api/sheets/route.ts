@@ -1,5 +1,5 @@
 const SPREADSHEET_ID = '11f-2OMHm0estWO-CISuVY8gl-AJxf0PnyaR1_M4bAbk'
-const SHEET_NAME = '採用計画表'
+const SHEET_NAME = '採用計画表(5/1更新)'
 
 export async function GET() {
   const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
@@ -23,12 +23,17 @@ export async function GET() {
     const sheets = google.sheets({ version: 'v4', auth })
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}`,
+      range: `'${SHEET_NAME}'`,
     })
 
     return Response.json({ source: 'sheets', rows: res.data.values ?? [] })
-  } catch (err) {
+  } catch (err: unknown) {
+    const e = err as { cause?: { message?: string }, message?: string }
     console.error('Sheets API error:', err)
-    return Response.json({ source: 'error', rows: [], message: 'スプレッドシートの読み込みに失敗しました' }, { status: 500 })
+    return Response.json({
+      source: 'error',
+      rows: [],
+      message: e?.cause?.message ?? e?.message ?? 'スプレッドシートの読み込みに失敗しました',
+    }, { status: 500 })
   }
 }
