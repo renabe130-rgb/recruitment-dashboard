@@ -21,12 +21,34 @@ export async function GET() {
     })
 
     const sheets = google.sheets({ version: 'v4', auth })
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `'${SHEET_NAME}'`,
+
+    // 値とメタデータを並列取得
+    const [valuesRes, metaRes] = await Promise.all([
+      sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `'${SHEET_NAME}'`,
+      }),
+      sheets.spreadsheets.get({
+        spreadsheetId: SPREADSHEET_ID,
+        ranges: [`'${SHEET_NAME}'`],
+        fields: 'sheets(properties(title),data(rowMetadata(hiddenByFilter,hiddenByUser)))',
+      }),
+    ])
+
+    const allRows = (valuesRes.data.values as string[][]) ?? []
+    const targetSheet = metaRes.data.sheets?.find(
+      s => s.properties?.title?.trim() === SHEET_NAME.trim()
+    )
+    const rowMeta = targetSheet?.data?.[0]?.rowMetadata ?? []
+
+    // フィルタ・手動非表示の行を除外
+    const visibleRows = allRows.filter((_, i) => {
+      const m = rowMeta[i]
+      if (!m) return true
+      return !m.hiddenByFilter && !m.hiddenByUser
     })
 
-    return Response.json({ source: 'sheets', rows: res.data.values ?? [] })
+    return Response.json({ source: 'sheets', rows: visibleRows })
   } catch (err: unknown) {
     const e = err as { cause?: { message?: string }, message?: string }
     console.error('Sheets API error:', err)

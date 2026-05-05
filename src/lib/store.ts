@@ -9,9 +9,10 @@ export type NAItem = {
   isValid: boolean
   raw: string
   createdAt: string
+  completedAt: string | null
 }
 
-export type NAItemInput = Omit<NAItem, 'id' | 'createdAt'>
+export type NAItemInput = Omit<NAItem, 'id' | 'createdAt' | 'completedAt'>
 
 export type JobTypeTarget = {
   total: number
@@ -26,6 +27,8 @@ export type Targets = {
   acceptances: JobTypeTarget
   hires: JobTypeTarget
 }
+
+export type NAFilter = 'pending' | 'completed' | 'all'
 
 const DEFAULT_TARGETS: Targets = {
   applications:    { total: 0, byType: { エンジニア: 0, セールス: 0, コーポレート: 0 } },
@@ -45,6 +48,7 @@ type NARow = {
   is_valid: boolean
   raw: string
   created_at: string
+  completed_at: string | null
 }
 
 function rowToItem(row: NARow): NAItem {
@@ -57,15 +61,19 @@ function rowToItem(row: NARow): NAItem {
     isValid: row.is_valid,
     raw: row.raw,
     createdAt: row.created_at,
+    completedAt: row.completed_at,
   }
 }
 
 export const naStore = {
-  async getAll(): Promise<NAItem[]> {
-    const { data, error } = await supabase
+  async getAll(filter: NAFilter = 'all'): Promise<NAItem[]> {
+    let q = supabase
       .from('na_items')
       .select('*')
       .order('created_at', { ascending: false })
+    if (filter === 'pending') q = q.is('completed_at', null)
+    if (filter === 'completed') q = q.not('completed_at', 'is', null)
+    const { data, error } = await q
     if (error) {
       console.error('[naStore.getAll]', error)
       return []
@@ -91,6 +99,19 @@ export const naStore = {
       return null
     }
     return rowToItem(data as NARow)
+  },
+
+  async setCompleted(id: string, completed: boolean): Promise<boolean> {
+    const completedAt = completed ? new Date().toISOString() : null
+    const { error } = await supabase
+      .from('na_items')
+      .update({ completed_at: completedAt })
+      .eq('id', id)
+    if (error) {
+      console.error('[naStore.setCompleted]', error)
+      return false
+    }
+    return true
   },
 
   async remove(id: string): Promise<boolean> {

@@ -18,6 +18,7 @@ const TABS = [
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('kpi')
+  const [refreshKey, setRefreshKey] = useState(0)
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -25,22 +26,31 @@ export default function DashboardPage() {
     router.push('/')
   }
 
+  const handleRefresh = () => setRefreshKey(k => k + 1)
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
             <h1 className="text-lg font-bold text-gray-800">採用ダッシュボード</h1>
-            <button
-              onClick={handleLogout}
-              className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              ログアウト
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleRefresh}
+                className="text-sm text-gray-500 hover:text-blue-600 transition-colors"
+                aria-label="更新"
+              >
+                ⟳ 更新
+              </button>
+              <button
+                onClick={handleLogout}
+                className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                ログアウト
+              </button>
+            </div>
           </div>
 
-          {/* タブナビ */}
           <nav className="flex gap-1 -mb-px overflow-x-auto">
             {TABS.map(tab => (
               <button
@@ -59,13 +69,12 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* コンテンツ */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {activeTab === 'kpi' && <KPITab />}
-        {activeTab === 'schedule' && <ScheduleTab />}
-        {activeTab === 'plan' && <PlanTab />}
-        {activeTab === 'na' && <NATab />}
-        {activeTab === 'calendar' && <CalendarTab />}
+        {activeTab === 'kpi'      && <KPITab      key={refreshKey} />}
+        {activeTab === 'schedule' && <ScheduleTab key={refreshKey} />}
+        {activeTab === 'plan'     && <PlanTab     key={refreshKey} />}
+        {activeTab === 'na'       && <NATab       key={refreshKey} />}
+        {activeTab === 'calendar' && <CalendarTab key={refreshKey} />}
       </main>
     </div>
   )
