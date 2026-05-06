@@ -1,5 +1,5 @@
 import { mockKPI } from '@/lib/mock-data'
-import { buildKPISummary, getRequisitionGroups, getAllRequisitions, ALLOWED_GROUPS } from '@/lib/herp'
+import { buildKPISummary, getRequisitionGroups, getAllRequisitions, getAllCandidacies, ALLOWED_GROUPS } from '@/lib/herp'
 import { kpiCacheStore, finalStageStore } from '@/lib/store'
 
 const HERP_API_KEY = process.env.HERP_API_KEY
@@ -14,6 +14,53 @@ export async function GET(request: Request) {
     if (!HERP_API_KEY) return Response.json({ source: 'mock', groups: [] })
     const groups = await getRequisitionGroups()
     return Response.json({ source: 'herp', groups })
+  }
+
+  // 確認用: 月別の応募集計状況（HERP API が何件返しているか）
+  if (type === 'month-debug') {
+    if (!HERP_API_KEY) return Response.json({ error: 'no key' })
+    const month = searchParams.get('month') ?? `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+    const [yStr, mStr] = month.split('-')
+    const year = Number(yStr)
+    const monthN = Number(mStr)
+    const monthFromTo = `${month}-01`
+    const lastDay = new Date(year, monthN, 0).getDate()
+    const monthEnd = `${month}-${String(lastDay).padStart(2, '0')}`
+
+    const candidacies = await getAllCandidacies(`appliedAtFrom=${monthFromTo}&appliedAtTo=${monthEnd}`)
+
+    // 求人グループの逆引きマップを作成
+    const allGroups = await getRequisitionGroups()
+    const allowedSet = new Set<string>(ALLOWED_GROUPS)
+    const targetGroups = allGroups.filter(g => allowedSet.has(g.name))
+    const reqIdToGroupName = new Map<string, string>()
+    await Promise.all(targetGroups.map(async g => {
+      const { getRequisitionGroupDetail } = await import('@/lib/herp')
+      const detail = await getRequisitionGroupDetail(g.id)
+      detail?.requisitions.forEach(r => reqIdToGroupName.set(r.id, g.name))
+    }))
+
+    let inAllowed = 0
+    let outAllowed = 0
+    const byGroup: Record<string, number> = {}
+    candidacies.forEach(c => {
+      const g = reqIdToGroupName.get(c.requisitionId) ?? 'その他'
+      byGroup[g] = (byGroup[g] ?? 0) + 1
+      if (g === 'その他') outAllowed++
+      else inAllowed++
+    })
+
+    return Response.json({
+      month,
+      apiQuery: `appliedAtFrom=${monthFromTo}&appliedAtTo=${monthEnd}`,
+      totalReturned: candidacies.length,
+      inAllowedGroups: inAllowed,
+      outAllowedGroups: outAllowed,
+      byGroup,
+      sampleApplied: candidacies.slice(0, 5).map(c => ({
+        id: c.id, name: c.name, appliedAt: c.appliedAt, status: c.status, requisitionId: c.requisitionId,
+      })),
+    })
   }
 
   // 確認用: 求人と職種グループの紐付け状況
