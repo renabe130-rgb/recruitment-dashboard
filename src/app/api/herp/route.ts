@@ -16,6 +16,29 @@ export async function GET(request: Request) {
     return Response.json({ source: 'herp', groups })
   }
 
+  // パラメータなしで /v1/candidacies の最新ページを確認
+  if (type === 'sample') {
+    if (!HERP_API_KEY) return Response.json({ error: 'no key' })
+    const candidacies = await getAllCandidacies('')
+    const now = new Date()
+    const currentMonth = now.getMonth() + 1
+    const sampleCount = Math.min(20, candidacies.length)
+    const distribution: Record<string, number> = {}
+    candidacies.forEach(c => {
+      if (!c.appliedAt) return
+      const d = new Date(c.appliedAt)
+      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      distribution[ym] = (distribution[ym] ?? 0) + 1
+    })
+    return Response.json({
+      totalAll: candidacies.length,
+      currentMonth: `${now.getFullYear()}-${String(currentMonth).padStart(2, '0')}`,
+      ymDistribution: distribution,
+      newest5: candidacies.slice(0, 5).map(c => ({ id: c.id, name: c.name, appliedAt: c.appliedAt, status: c.status })),
+      oldest5: candidacies.slice(-5).map(c => ({ id: c.id, name: c.name, appliedAt: c.appliedAt, status: c.status })),
+    })
+  }
+
   // 確認用: 月別の応募集計状況（HERP API が何件返しているか）
   if (type === 'month-debug') {
     if (!HERP_API_KEY) return Response.json({ error: 'no key' })
