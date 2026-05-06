@@ -1,28 +1,12 @@
 export const mockKPI = {
-  applications: {
-    total: 42,
-    byType: { エンジニア: 18, セールス: 15, コーポレート: 9 },
-  },
-  firstInterview: {
-    total: 28,
-    byType: { エンジニア: 12, セールス: 10, コーポレート: 6 },
-  },
-  secondInterview: {
-    total: 14,
-    byType: { エンジニア: 6, セールス: 5, コーポレート: 3 },
-  },
-  offers: {
-    total: 7,
-    byType: { エンジニア: 3, セールス: 3, コーポレート: 1 },
-  },
-  acceptances: {
-    total: 5,
-    byType: { エンジニア: 2, セールス: 2, コーポレート: 1 },
-  },
-  hires: {
-    total: 3,
-    byType: { エンジニア: 1, セールス: 1, コーポレート: 1 },
-  },
+  applications:   { total: 42, byGroup: { エンジニア: 18, セールス: 15, コーポレート: 9 } },
+  firstInterview: { total: 28, byGroup: { エンジニア: 12, セールス: 10, コーポレート: 6 } },
+  finalInterview: { total: 14, byGroup: { エンジニア: 6,  セールス: 5,  コーポレート: 3 } },
+  offered:        { total: 7,  byGroup: { エンジニア: 3,  セールス: 3,  コーポレート: 1 } },
+  offerAccepted:  { total: 5,  byGroup: { エンジニア: 2,  セールス: 2,  コーポレート: 1 } },
+  groupNames:     ['エンジニア', 'セールス', 'コーポレート'],
+  totalCandidacies: 42,
+  fetchedAt: new Date().toISOString(),
 }
 
 export const mockSchedule = {

@@ -3,14 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import KPITab from '@/components/tabs/KPITab'
-import ScheduleTab from '@/components/tabs/ScheduleTab'
 import PlanTab from '@/components/tabs/PlanTab'
 import NATab from '@/components/tabs/NATab'
 import CalendarTab from '@/components/tabs/CalendarTab'
 
 const TABS = [
   { id: 'kpi', label: 'KPI進捗' },
-  { id: 'schedule', label: '採用スケジュール' },
   { id: 'plan', label: '採用計画' },
   { id: 'na', label: 'NA管理' },
   { id: 'calendar', label: '採用カレンダー' },
@@ -71,7 +69,6 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {activeTab === 'kpi'      && <KPITab      key={refreshKey} />}
-        {activeTab === 'schedule' && <ScheduleTab key={refreshKey} />}
         {activeTab === 'plan'     && <PlanTab     key={refreshKey} />}
         {activeTab === 'na'       && <NATab       key={refreshKey} />}
         {activeTab === 'calendar' && <CalendarTab key={refreshKey} />}
