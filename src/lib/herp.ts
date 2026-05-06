@@ -248,7 +248,8 @@ export async function buildKPISummary(monthYM: string): Promise<KPISummary> {
   ;[...appliedThisMonth, ...stepUpdatedThisMonth].forEach(c => candMap.set(c.id, c))
   const candidacies = [...candMap.values()]
 
-  const groupNames = [...ALLOWED_GROUPS]
+  const OTHER_GROUP = 'その他'
+  const groupNames = [...ALLOWED_GROUPS, OTHER_GROUP]
   const emptyKPI = (): KPIByGroup => ({
     total: 0,
     byGroup: Object.fromEntries(groupNames.map(n => [n, 0])) as Record<string, number>,
@@ -268,21 +269,22 @@ export async function buildKPISummary(monthYM: string): Promise<KPISummary> {
 
   const stepRankFinal: Record<string, number> = { finalInterview: 1, offered: 2, offerAccepted: 3 }
 
-  // 12グループに紐づく候補者のみ集計対象
-  const targetCandidacies = candidacies.filter(c => reqIdToGroupName.has(c.requisitionId))
+  // groupName 判定: ホワイトリストになければ「その他」
+  const getGroupName = (c: Candidacy): string =>
+    reqIdToGroupName.get(c.requisitionId) ?? OTHER_GROUP
 
-  // 応募数 = appliedAt が指定月の候補者
-  targetCandidacies.forEach(c => {
+  // 応募数: 当月応募の全候補者（グループ無視・HERPの数字と一致）
+  appliedThisMonth.forEach(c => {
     if (!isInMonth(c.appliedAt, year, month)) return
-    const g = reqIdToGroupName.get(c.requisitionId)!
+    const g = getGroupName(c)
     summary.applications.total++
     summary.applications.byGroup[g] = (summary.applications.byGroup[g] ?? 0) + 1
   })
 
-  // ステージ別 = 当月内に作成されたコンタクトの step を集計（同じ月・同じステージ・同じ人は1カウント）
-  const contactsMap = await getContactsBulk(targetCandidacies.map(c => c.id))
-  targetCandidacies.forEach(c => {
-    const g = reqIdToGroupName.get(c.requisitionId)!
+  // 一次以降: 全候補者（グループ無視）の当月コンタクトを集計
+  const contactsMap = await getContactsBulk(candidacies.map(c => c.id))
+  candidacies.forEach(c => {
+    const g = getGroupName(c)
     const seenStages = new Set<string>()
     let highestFinalRank = 0
     let highestFinalStep: 'finalInterview' | 'offered' | 'offerAccepted' | null = null
