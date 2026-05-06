@@ -1,4 +1,4 @@
-import { mockKPI, mockSchedule } from '@/lib/mock-data'
+import { mockKPI } from '@/lib/mock-data'
 import { buildKPISummary, getRequisitionGroups, getAllRequisitions, ALLOWED_GROUPS } from '@/lib/herp'
 import { kpiCacheStore, finalStageStore } from '@/lib/store'
 
@@ -8,11 +8,6 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000  // 24時間（強制更新で上書き
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const type = searchParams.get('type')
-
-  // schedule は今のところモック
-  if (type === 'schedule') {
-    return Response.json({ source: HERP_API_KEY ? 'mock-fallback' : 'mock', data: mockSchedule })
-  }
 
   // 確認用: HERP に登録されている職種グループ一覧を返す
   if (type === 'groups') {
