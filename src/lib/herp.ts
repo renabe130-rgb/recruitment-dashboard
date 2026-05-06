@@ -201,11 +201,14 @@ export type KPISummary = {
   }[]
 }
 
-// 月（YYYY-MM）の境界判定: その月の 00:00 ～ 翌月の 00:00 (排他的)
+// 月（YYYY-MM）の境界判定: JST(UTC+9) 基準
+// Vercel の Node.js は UTC で動くため、JST 固定の換算が必要
 function isInMonth(iso: string, year: number, month: number): boolean {
   if (!iso) return false
   const d = new Date(iso)
-  return d.getFullYear() === year && d.getMonth() + 1 === month
+  if (isNaN(d.getTime())) return false
+  const jst = new Date(d.getTime() + 9 * 3600 * 1000)
+  return jst.getUTCFullYear() === year && jst.getUTCMonth() + 1 === month
 }
 
 const STAGE_BY_STEP = Object.fromEntries(
