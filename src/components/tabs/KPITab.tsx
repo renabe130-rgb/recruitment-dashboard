@@ -106,7 +106,7 @@ function formatDate(s: string | null): string {
 }
 
 function KPICard({
-  label, actual, target, byGroup, byGroupTarget, groupNames, onEditTarget,
+  label, actual, target, byGroup, byGroupTarget, groupNames, onEditTarget, showZeroTargets,
 }: {
   label: string
   actual: number
@@ -115,6 +115,7 @@ function KPICard({
   byGroupTarget: Record<string, number>
   groupNames: string[]
   onEditTarget: (total: number, byGroup: Record<string, number>) => void
+  showZeroTargets: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -153,24 +154,31 @@ function KPICard({
       </button>
       {expanded && (
         <div className="mt-3 space-y-2">
-          {groupNames.map(name => {
-            const a = byGroup[name] ?? 0
-            const t = byGroupTarget[name] ?? 0
-            const p = t > 0 ? Math.min(100, Math.round((a / t) * 100)) : 0
-            return (
-              <div key={name}>
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
-                  <span>{name}</span>
-                  <span>{a} / {t > 0 ? t : '未設定'} 名 {t > 0 ? `(${p}%)` : ''}</span>
-                </div>
-                {t > 0 && (
-                  <div className="w-full bg-gray-100 rounded-full h-1.5">
-                    <div className={`h-1.5 rounded-full ${progressColor(a, t)}`} style={{ width: `${p}%` }} />
+          {groupNames
+            .filter(name => showZeroTargets || (byGroupTarget[name] ?? 0) > 0)
+            .map(name => {
+              const a = byGroup[name] ?? 0
+              const t = byGroupTarget[name] ?? 0
+              const p = t > 0 ? Math.min(100, Math.round((a / t) * 100)) : 0
+              return (
+                <div key={name}>
+                  <div className="flex justify-between text-xs text-gray-600 mb-1">
+                    <span>{name}</span>
+                    <span>{a} / {t > 0 ? t : '未設定'} 名 {t > 0 ? `(${p}%)` : ''}</span>
                   </div>
-                )}
-              </div>
-            )
-          })}
+                  {t > 0 && (
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div className={`h-1.5 rounded-full ${progressColor(a, t)}`} style={{ width: `${p}%` }} />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          {!showZeroTargets && groupNames.filter(n => (byGroupTarget[n] ?? 0) === 0).length > 0 && (
+            <p className="text-[11px] text-gray-400 pt-1">
+              ※目標未設定の職種({groupNames.filter(n => (byGroupTarget[n] ?? 0) === 0).length}個)は非表示中。上部のチェックで切り替え可能
+            </p>
+          )}
         </div>
       )}
       {editing && (
@@ -180,12 +188,12 @@ function KPICard({
             <div className="space-y-3">
               <div>
                 <label className="text-sm text-gray-600">合計目標</label>
-                <input type="number" value={editTotal} onChange={e => setEditTotal(e.target.value)} className="w-full border rounded-lg px-3 py-2 mt-1 text-sm" />
+                <input type="number" value={editTotal} onChange={e => setEditTotal(e.target.value)} onWheel={e => (e.target as HTMLElement).blur()} className="w-full border rounded-lg px-3 py-2 mt-1 text-sm" />
               </div>
               {groupNames.map(name => (
                 <div key={name}>
                   <label className="text-sm text-gray-600">{name}</label>
-                  <input type="number" value={editByGroup[name] ?? '0'} onChange={e => setEditByGroup(prev => ({ ...prev, [name]: e.target.value }))} className="w-full border rounded-lg px-3 py-2 mt-1 text-sm" />
+                  <input type="number" value={editByGroup[name] ?? '0'} onChange={e => setEditByGroup(prev => ({ ...prev, [name]: e.target.value }))} onWheel={e => (e.target as HTMLElement).blur()} className="w-full border rounded-lg px-3 py-2 mt-1 text-sm" />
                 </div>
               ))}
             </div>
@@ -430,6 +438,7 @@ export default function KPITab() {
   const [source, setSource] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [finalStageItems, setFinalStageItems] = useState<FinalStageCandidate[]>([])
+  const [showZeroTargets, setShowZeroTargets] = useState(false)
 
   const fetchKpi = useCallback(async (force = false) => {
     setLoading(true)
@@ -497,6 +506,16 @@ export default function KPITab() {
         </div>
       </div>
 
+      <label className="flex items-center gap-2 text-xs text-gray-600 select-none cursor-pointer">
+        <input
+          type="checkbox"
+          checked={showZeroTargets}
+          onChange={e => setShowZeroTargets(e.target.checked)}
+          className="w-3.5 h-3.5"
+        />
+        目標未設定の職種も表示する
+      </label>
+
       {source === 'mock' || source === 'mock-fallback' ? (
         <div className="text-xs px-3 py-2 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg">
           ※モックデータを表示中（source: {source}）
@@ -534,6 +553,7 @@ export default function KPITab() {
                   byGroupTarget={tgt.byGroup ?? {}}
                   groupNames={kpi.groupNames}
                   onEditTarget={(total, byGroup) => updateTarget(key, total, byGroup)}
+                  showZeroTargets={showZeroTargets}
                 />
               )
             })}
