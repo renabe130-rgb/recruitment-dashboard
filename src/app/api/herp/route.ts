@@ -16,6 +16,33 @@ export async function GET(request: Request) {
     return Response.json({ source: 'herp', groups })
   }
 
+  // HERP API への直接アクセス確認
+  if (type === 'apicheck') {
+    const hasKey = !!HERP_API_KEY
+    if (!hasKey) return Response.json({ error: 'HERP_API_KEY not set' })
+    try {
+      const res = await fetch('https://public-api.herp.cloud/hire/v1/candidacies?page=1', {
+        headers: { Authorization: `Bearer ${HERP_API_KEY}` },
+        cache: 'no-store',
+      })
+      const text = await res.text()
+      let body: unknown = null
+      try { body = JSON.parse(text) } catch { body = text.substring(0, 300) }
+      return Response.json({
+        keySet: true,
+        keyLength: HERP_API_KEY!.length,
+        keyPrefix: HERP_API_KEY!.substring(0, 8) + '...',
+        httpStatus: res.status,
+        httpStatusText: res.statusText,
+        candidaciesCount: (body as { candidacies?: unknown[] })?.candidacies?.length ?? null,
+        hasNextPage: (body as { hasNextPage?: boolean })?.hasNextPage ?? null,
+        bodyPreview: typeof body === 'string' ? body : JSON.stringify(body).substring(0, 300),
+      })
+    } catch (e) {
+      return Response.json({ error: 'fetch failed', detail: String(e) })
+    }
+  }
+
   // パラメータなしで /v1/candidacies の最新ページを確認
   if (type === 'sample') {
     if (!HERP_API_KEY) return Response.json({ error: 'no key' })
